@@ -13,6 +13,7 @@ class DbSyncCommand extends Command
     public function handle(): bool
     {
         $inTest = $this->option('test');
+        $mysqlComatibile = $this->option('mysql-comatibile');
 
         if (! in_array(config('app.env'), config('dbsync.environments'))) {
             $this->error('DB sync will only run on local and staging environments');
@@ -71,6 +72,10 @@ class DbSyncCommand extends Command
             } else {
                 exec("mysqldump --single-transaction --set-gtid-purged=OFF --port=$port --host=$mysqlHostName --user=$username --password=$password $database $ignoreString $mysqldumpSkipTzUtc --column-statistics=0 > $fileName", $output);
             }
+            
+            if($mysqlComatibile) {
+                $this->convertMariadbToMysql($fileName);
+            }
 
             $progressBar->advance();
 
@@ -90,5 +95,51 @@ class DbSyncCommand extends Command
         $this->comment("\nDB Synced");
 
         return true;
+    }
+
+    private function convertMariadbToMysql($inputFile) {
+        if (!file_exists($inputFile)) {
+            throw new \Exception("Plik wejściowy nie istnieje: $inputFile");
+        }
+    
+        $inputLines = file($inputFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+        $outputLines = [];
+    
+        foreach ($inputLines as $line) {
+            // Zamiana LONGTEXT + CHECK(json_valid(...)) na JSON
+            if (strpos($line, 'longtext') !== false && strpos($line, 'json_valid') !== false) {
+                // Zamiana LONGTEXT na JSON
+                $line = preg_replace('/longtext/', 'JSON', $line);
+                // Usunięcie CHECK(json_valid(...)) i CHARACTER SET, COLLATE
+                $line = preg_replace('/ CHECK \(json_valid\([^)]+\)\)/', '', $line);
+                $line = preg_replace('/ CHARACTER SET [^ ]* COLLATE [^ ]*/', '', $line);
+                
+            }
+
+            // Zamiana json_array('PL') na (json_array(_utf8mb4'PL'))
+            if (strpos($line, 'json_array') !== false) {
+                $line = preg_replace(
+                    '/json_array\(([^)]+)\)/',
+                    '(json_array(_utf8mb4\1))',
+                    $line
+                );
+
+                if (!preg_match('/\(json_array/', $line)) {
+                    // Dodajemy nawiasy wokół json_array
+                    $line = preg_replace('/json_array([^)]*)/', '(json_array\1)', $line);
+                }
+    
+                // Sprawdzamy, czy _utf8mb4 jest obecne
+                if (!strpos($line, "_utf8mb4")) {
+                    // Dodajemy _utf8mb4
+                    $line = preg_replace('/\(json_array/', '(json_array(_utf8mb4', $line);
+                }
+            }
+    
+            $outputLines[] = $line;
+        }
+    
+        // Zapisanie zmodyfikowanych linii do pliku wyjściowego
+        file_put_contents($inputFile, implode(PHP_EOL, $outputLines));
     }
 }
