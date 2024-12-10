@@ -7,13 +7,13 @@ use Illuminate\Support\Facades\DB;
 
 class DbSyncCommand extends Command
 {
-    protected $signature   = 'db:production-sync {--T|test} {--F|filename=}';
+    protected $signature   = 'db:production-sync {--T|test} {--F|filename=} {--C|compatible}';
     protected $description = 'Sync production database with local';
 
     public function handle(): bool
     {
         $inTest = $this->option('test');
-        $mysqlComatibile = $this->option('mysql-comatibile');
+        $mysqlComatibile = $this->option('compatible');
 
         if (! in_array(config('app.env'), config('dbsync.environments'))) {
             $this->error('DB sync will only run on local and staging environments');
