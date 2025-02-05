@@ -108,33 +108,19 @@ class DbSyncCommand extends Command
         foreach ($inputLines as $line) {
             // Zamiana LONGTEXT + CHECK(json_valid(...)) na JSON
             if (strpos($line, 'longtext') !== false && strpos($line, 'json_valid') !== false) {
-                // Zamiana LONGTEXT na JSON
-                $line = preg_replace('/longtext/', 'JSON', $line);
-                // Usunięcie CHECK(json_valid(...)) i CHARACTER SET, COLLATE
-                $line = preg_replace('/ CHECK \(json_valid\([^)]+\)\)/', '', $line);
-                $line = preg_replace('/ CHARACTER SET [^ ]* COLLATE [^ ]*/', '', $line);
+                
+                // Wyrażenie regularne dopasowujące linijkę do zmiany
+                $pattern = '/`(\w+)`\s+longtext\s+CHARACTER\s+SET\s+utf8mb4\s+COLLATE\s+utf8mb4_bin\s+NOT\s+NULL\s+DEFAULT\s+json_array\(_utf8mb4\'PL\'\)\s+CHECK\s+\(json_valid\(`\w+`\)\),/';
+
+                // Funkcja zamiany
+                $replacement = '`$1` json NOT NULL DEFAULT (json_array(_utf8mb4\'PL\')),';
+
+                // Zastąpienie w treści pliku
+                $line = preg_replace($pattern, $replacement, $line);
+
                 
             }
 
-            // Zamiana json_array('PL') na (json_array(_utf8mb4'PL'))
-            if (strpos($line, 'json_array') !== false) {
-                $line = preg_replace(
-                    '/json_array\(([^)]+)\)/',
-                    '(json_array(_utf8mb4\1))',
-                    $line
-                );
-
-                if (!preg_match('/\(json_array/', $line)) {
-                    // Dodajemy nawiasy wokół json_array
-                    $line = preg_replace('/json_array([^)]*)/', '(json_array\1)', $line);
-                }
-    
-                // Sprawdzamy, czy _utf8mb4 jest obecne
-                if (!strpos($line, "_utf8mb4")) {
-                    // Dodajemy _utf8mb4
-                    $line = preg_replace('/\(json_array/', '(json_array(_utf8mb4', $line);
-                }
-            }
     
             $outputLines[] = $line;
         }
