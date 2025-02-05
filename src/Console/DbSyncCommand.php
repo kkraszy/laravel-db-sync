@@ -107,7 +107,7 @@ class DbSyncCommand extends Command
     
         foreach ($inputLines as $line) {
             // Zamiana LONGTEXT + CHECK(json_valid(...)) na JSON
-            if (strpos($line, 'longtext') !== false && strpos($line, 'json_valid') !== false) {
+            if (strpos($line, 'longtext') !== false && strpos($line, 'json_array') !== false) {
                 
                 // Wyrażenie regularne dopasowujące linijkę do zmiany
                 $pattern = '/`(\w+)`\s+longtext\s+CHARACTER\s+SET\s+utf8mb4\s+COLLATE\s+utf8mb4_bin\s+NOT\s+NULL\s+DEFAULT\s+json_array\(_utf8mb4\'PL\'\)\s+CHECK\s+\(json_valid\(`\w+`\)\),/';
