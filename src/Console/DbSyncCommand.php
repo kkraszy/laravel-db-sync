@@ -73,10 +73,8 @@ class DbSyncCommand extends Command
                 exec("mysqldump --single-transaction --set-gtid-purged=OFF --port=$port --host=$mysqlHostName --user=$username --password=$password $database $ignoreString $mysqldumpSkipTzUtc --column-statistics=0 > $fileName", $output);
             }
             
-            if($mysqlComatibile) {
-                $this->convertMariadbToMysql($fileName);
-            }
-
+            $this->convertMariadbToMysql($fileName);
+            
             $progressBar->advance();
 
             $command = $localPassword
